@@ -2,12 +2,78 @@ import random
 import fasttext
 import uuid
 
-from tqdm import tqdm
+
+class Experience():
+
+    def __init__(self, params, n_individuals, p_best=0.2, mutation=0.1, mix_rate=0.1, n_rounds=10, n_tests=1):
+        self.population = Population(params, n_individuals=n_individuals, n_rounds=n_rounds)
+        self.verbose = True
+        self.n_epoch = 1
+        self.params = params
+        self.n_individuals = n_individuals
+        self.p_best = p_best
+        self.mutation = mutation
+        self.mix_rate = mix_rate
+        self.n_rounds = n_rounds
+        self.n_tests = n_tests
+
+    def launch(self):
+        """
+        Does the necessary rounds and keeps the best individual at the end
+        of the process.
+        """
+
+        template_s = '{0:<17} : {1}'
+        if self.verbose:
+            print(template_s.format('n_individuals', self.n_individuals))
+            print(template_s.format('p_best', self.p_best))
+            print(template_s.format('mutation', self.mutation))
+            print(template_s.format('n_rounds', self.n_rounds))
+            print(template_s.format('n_tests', self.n_tests))
+
+        self.population.init_population()
+        self.population.sort_individuals()
+
+        for step in range(self.n_rounds):
+            self.population.next_generation()
+            self.n_epoch += 1
+            if self.verbose:
+                print(self)
+
+        return self.population.individuals[0]
+
+    def __repr__(self):
+        r_string = '\n' + '#'*50 + '\n'
+        r_string += 'Epoch #{}/{}'.format(self.n_epoch, self.n_rounds) + '\n'
+        r_string += '#'*50 + '\n'
+
+        template_s = ''.join(['{%s:<5}\t'%i for i in range(len(self.population.individuals))])
+        s = template_s.format(*[str(i.id)[:5] for i in self.population.individuals])
+        r_string += s + '\n'
+        for param in self.params:
+            if param.name == 'lr':
+                s = template_s.format(*map(str, [i.lr for i in self.population.individuals]))
+            elif param.name == 'epoch':
+                s = template_s.format(*map(str, [i.epoch for i in self.population.individuals]))
+            elif param.name == 'min_count':
+                s = template_s.format(*map(str, [i.min_count for i in self.population.individuals]))
+            elif param.name == 'word_ngrams':
+                s = template_s.format(*map(str, [i.word_ngrams for i in self.population.individuals]))
+            r_string += s + '\n'
+
+        s = template_s.format(*[str(i.score)[:5] for i in self.population.individuals])
+        r_string += s + '\n'
+        return r_string
 
 
 class Population():
 
-    def __init__(self, params, n_individuals=10, p_best=0.2, mutation=0.01, mix_rate=0.1, n_rounds=10, n_tests=1):
+    """
+    Represents a population of individuals procreating and being left out if
+    there are not fit enough
+    """
+
+    def __init__(self, params, n_individuals=10, p_best=0.2, mutation=0.1, mix_rate=0.1, n_rounds=10, n_tests=1):
 
         if not params:
             raise Exception
@@ -23,10 +89,18 @@ class Population():
         self.n_tests = n_tests
         self.n_epoch = 1
         self.verbose = True
+        self.individuals = []
 
-        self.individuals = [self.generate_random_individual() for i in range(n_individuals)]
+    def init_population(self):
+        """
+        Inits the population with individuals with random attributes
+        """
+        self.individuals = [self.generate_random_individual() for i in range(self.n_individuals)]
 
     def generate_random_individual(self):
+        """
+        Generates an individual with random attributes
+        """
 
         ind = Individual()
 
@@ -44,19 +118,19 @@ class Population():
         return ind
 
     def sort_individuals(self):
-        # Computes scores and keeps the fittest
+        """
+        Computes scores and keeps the fittest
+        """
         for ind in self.individuals:
             ind.calculate_score(self.n_tests)
 
         self.individuals = sorted(self.individuals, key=lambda x: x.score, reverse=True)
 
     def next_generation(self):
-
-        # Sort the individuals to have the fittest first
-        self.sort_individuals()
-
-        if self.verbose:
-            self.pprint()
+        """
+        Computes the next generation of individuals by mixing 2 individuals from
+        the previous generation
+        """
 
         n_kept = self.p_best*len(self.individuals)
         if n_kept < 2: n_kept = 2
@@ -112,9 +186,12 @@ class Population():
 
         self.individuals = kept + children
 
+        # Sort the individuals to have the fittest first
+        self.sort_individuals()
+
     def launch(self):
         """
-        Does the necessary rounds and keep the best individual at the end
+        Does the necessary rounds and keeps the best individual at the end
         of the process.
         """
 
@@ -125,35 +202,19 @@ class Population():
             print('n_rounds : ', self.n_rounds)
             print('n_tests : ', self.n_tests)
 
-        for step in tqdm(range(self.n_rounds), desc=str(self.n_epoch)):
+        for step in range(self.n_rounds):
             self.next_generation()
             self.n_epoch += 1
 
         self.sort_individuals()
         return self.individuals[0]
 
-    def pprint(self):
-        print('\n' + '#'*50)
-        print('Epoch # {}'.format(self.n_epoch))
-        print('#'*50)
-        s = '{0:<8}\t{1:<8}\t{2:<8}\t{3:<8}\t{4:<8}\t'
-        s = s.format(*[str(i.id)[:5] for i in self.individuals])
-        for param in params:
-            s = '{0:<8}\t{1:<8}\t{2:<8}\t{3:<8}\t{4:<8}\t'
-            if param.name == 'lr':
-                s = s.format(*map(str, [i.lr for i in self.individuals]))
-            elif param.name == 'epoch':
-                s = s.format(*map(str, [i.epoch for i in self.individuals]))
-            elif param.name == 'min_count':
-                s = s.format(*map(str, [i.min_count for i in self.individuals]))
-            elif param.name == 'word_ngrams':
-                s = s.format(*map(str, [i.word_ngrams for i in self.individuals]))
-            print(s)
-        s = '{0:<8}\t{1:<8}\t{2:<8}\t{3:<8}\t{4:<8}\t'
-        s = s.format(*[str(i.score)[:5] for i in self.individuals])
-        print(s)
 
 class Individual():
+
+    """
+    An individual is composed of attributes (genes) of certain values (alleles).
+    """
 
     def __init__(self, lr=None, epoch=None, min_count=None, word_ngrams=None, score=0):
         self.lr = lr
@@ -168,8 +229,14 @@ class Individual():
         self.id = uuid.uuid4()
 
     def calculate_score(self, n_tests):
+        """
+        The score of the individual denotes of its fitness.
+        """
 
         def get_metrics(model, test_file):
+            """
+            Get the metrics, accuracy and recall of the model
+            """
 
             with open(test_file, 'r') as f:
                 test = [l.rstrip() for l in f]
@@ -236,28 +303,13 @@ class Individual():
 
 class Param():
 
+    """
+    A param is an attribute of fasttext. This attribute can take several values.
+    """
+
     def __init__(self, name, values):
         if not values:
             raise Exception
 
         self.name = name
         self.values = sorted(list(set(values)))
-
-
-if __name__ == '__main__':
-
-    n_individuals = 5
-    n_rounds = 3
-
-    lr = Param('lr', [0.1, 0.2, 0.5])
-    epoch = Param('epoch', [1, 5, 10])
-    min_count = Param('min_count', [1, 10, 20])
-    word_ngrams = Param('word_ngrams', [1, 2])
-
-    params = [lr, epoch, min_count, word_ngrams]
-
-    population = Population(params, n_individuals=n_individuals, n_rounds=n_rounds)
-
-    best = population.launch()
-
-    print(best)
