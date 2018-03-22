@@ -1,5 +1,7 @@
 import random
 import fasttext
+import uuid
+
 from tqdm import tqdm
 
 
@@ -20,6 +22,7 @@ class Population():
         self.n_rounds = n_rounds
         self.n_tests = n_tests
         self.n_epoch = 1
+        self.verbose = True
 
         self.individuals = [self.generate_random_individual() for i in range(n_individuals)]
 
@@ -40,36 +43,36 @@ class Population():
 
         return ind
 
-    def get_fittest(self):
+    def sort_individuals(self):
         # Computes scores and keeps the fittest
         for ind in self.individuals:
-            ind.calculate_score()
+            ind.calculate_score(self.n_tests)
 
-        fittest = sorted(self.individuals, key=lambda x: x.score, reverse=True)
-        return fittest
-
+        self.individuals = sorted(self.individuals, key=lambda x: x.score, reverse=True)
 
     def next_generation(self):
 
-        fittest = self.get_fittest()
-        self.individuals = fittest
+        # Sort the individuals to have the fittest first
+        self.sort_individuals()
 
-        self.pprint()
+        if self.verbose:
+            self.pprint()
 
         n_kept = self.p_best*len(self.individuals)
-        if n_kept < 2:
-            n_kept = 2
+        if n_kept < 2: n_kept = 2
         n_kept = int(n_kept)
         kept = self.individuals[:n_kept]
 
-        lucky_ones = [ind for ind in fittest[n_kept:] if random.random()<self.mix_rate]
+        # To add some variety, some unfit individuals are kept too
+        lucky_ones = [ind for ind in self.individuals[n_kept:] if random.random() < self.mix_rate]
         kept = kept + lucky_ones
 
         # Procreation
         children = []
+        i_father = i_mother = 0
         while len(kept) + len(children) < self.n_individuals:
-            i_father = random.randint(0, len(kept)-1)
-            i_mother = random.randint(0, len(kept)-1)
+
+            # Choose the 2 parents
             while i_mother == i_father:
                 i_father = random.randint(0, len(kept)-1)
                 i_mother = random.randint(0, len(kept)-1)
@@ -110,19 +113,31 @@ class Population():
         self.individuals = kept + children
 
     def launch(self):
+        """
+        Does the necessary rounds and keep the best individual at the end
+        of the process.
+        """
 
-        for step in tqdm(range(self.n_rounds), desc=self.n_epoch):
+        if self.verbose:
+            print('n_individuals : ', self.n_individuals)
+            print('p_best : ', self.p_best)
+            print('mutation : ', self.mutation)
+            print('n_rounds : ', self.n_rounds)
+            print('n_tests : ', self.n_tests)
+
+        for step in tqdm(range(self.n_rounds), desc=str(self.n_epoch)):
             self.next_generation()
             self.n_epoch += 1
 
-        fittest = self.get_fittest()
-        best_individual = fittest[0]
-        return best_individual
+        self.sort_individuals()
+        return self.individuals[0]
 
     def pprint(self):
         print('\n' + '#'*50)
         print('Epoch # {}'.format(self.n_epoch))
         print('#'*50)
+        s = '{0:<8}\t{1:<8}\t{2:<8}\t{3:<8}\t{4:<8}\t'
+        s = s.format(*[str(i.id)[:5] for i in self.individuals])
         for param in params:
             s = '{0:<8}\t{1:<8}\t{2:<8}\t{3:<8}\t{4:<8}\t'
             if param.name == 'lr':
@@ -150,11 +165,9 @@ class Individual():
         self.label = '__label__'
         self.train_file = 'train'
         self.test_file = 'test'
+        self.id = uuid.uuid4()
 
-    def copy(self):
-        return Individual(self.lr, self.epoch, self.min_count, self.word_ngrams, self.score)
-
-    def calculate_score(self):
+    def calculate_score(self, n_tests):
 
         def get_metrics(model, test_file):
 
@@ -206,14 +219,16 @@ class Individual():
                                              bucket=2000000,
                                              loss='ns')
             metrics = get_metrics(classifier, self.test_file)
-            recall = metrics['recall']
-            total_recall += recall
+            total_recall += metrics['recall']
 
-        self.score = total_recall/self.n_tests
+        self.score = total_recall/n_tests
 
         # Cleaning
         classifier = None
         metrics = None
+
+    def copy(self):
+        return Individual(self.lr, self.epoch, self.min_count, self.word_ngrams, self.score)
 
     def __repr__(self):
         return ', '.join(map(str, [self.lr, self.epoch, self.min_count, self.word_ngrams, self.score]))
