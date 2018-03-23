@@ -1,11 +1,14 @@
 import random
 import fasttext
 import uuid
+import time
+
+from utils import get_metrics
 
 
 class Experience():
 
-    def __init__(self, params, n_individuals, p_best=0.2, mutation=0.1,
+    def __init__(self, params, n_individuals, p_best=0.5, mutation=0.1,
                  mix_rate=0.1, n_rounds=10, n_tests=1):
 
         if params is None:
@@ -46,33 +49,43 @@ class Experience():
         self.population.sort_individuals()
 
         for step in range(self.n_rounds):
+            time_step_beginning = time.time()
             self.population.next_generation()
+            time_step_end = time.time()
+
             if self.verbose:
                 print(self)
+                print('Elapsed time : {}'.format(
+                    time_step_end-time_step_beginning))
             self.current_epoch += 1
 
         return self.population.individuals[0]
 
     def __repr__(self):
         r_string = '\n' + '#'*50 + '\n'
-        r_string += 'Epoch #{}/{}'.format(self.current_epoch,
-                                          self.n_rounds) + '\n'
+        r_string += 'Epoch {}/{}'.format(self.current_epoch,
+                                         self.n_rounds) + '\n'
         r_string += '#'*50 + '\n'
 
-        template_s = ''.join(
-            ['{%s:<5}\t' % i for i in range(len(self.population.individuals))])
-        s = template_s.format(*[str(i.id)[:5]
-                                for i in self.population.individuals])
+        template_s = '{0:<10}\t' + \
+            ''.join(['{%s:>5}\t' % (i+1) for i in range(len(self.population.individuals))])
+        s = template_s.format(*(['id'] + [str(i.id)[:5] for i in self.population.individuals]))
         r_string += s + '\n'
+
         fields = sorted([k for k in self.params])
         for f in fields:
             s = template_s.format(
-                *map(str, [i.params[f] for i in self.population.individuals]))
+                *map(str, [f] + [i.params[f] for i in self.population.individuals]))
             r_string += s + '\n'
 
-        s = template_s.format(*[str(i.score)[:5]
-                                for i in self.population.individuals])
+        s = template_s.format(*(['score'] + [str(i.score)[:5]
+                                             for i in self.population.individuals]))
         r_string += s + '\n'
+
+        s = template_s.format(*(['time_tr'] + [str(i.training_time)[:5]
+                                               for i in self.population.individuals]))
+        r_string += s + '\n'
+
         return r_string
 
 
@@ -83,7 +96,7 @@ class Population():
     there are not fit enough
     """
 
-    def __init__(self, params, n_individuals=10, p_best=0.2, mutation=0.1,
+    def __init__(self, params, n_individuals=10, p_best=0.5, mutation=0.1,
                  mix_rate=0.1, n_rounds=10, n_tests=1):
 
         if not params:
@@ -202,82 +215,53 @@ class Individual():
         self.train_file = 'train'
         self.test_file = 'test'
         self.id = uuid.uuid4()
+        self.verbose = True
+        self.training_time = 0
 
     def calculate_score(self, n_tests):
         """
         The score of the individual denotes of its fitness.
         """
 
-        def get_metrics(model, test_file):
-            """
-            Get the metrics, accuracy and recall of the model
-            """
-
-            with open(test_file, 'r') as f:
-                test = [l.rstrip() for l in f]
-            classes = sorted(list(set([l.split()[0][9:] for l in test])))
-            n_classes = len(classes)
-
-            confusion_matrix = [
-                [0 for _ in range(n_classes)] for _ in range(n_classes)]
-            examples = [[[] for _ in range(n_classes)]
-                        for _ in range(n_classes)]
-            for example in test:
-                example = example.split()
-                label = example[0][9:]
-                abstract = ' '.join(example[1:])
-
-                preds = model.predict_proba([abstract], k=n_classes)[0]
-                pred, proba = preds[0]
-
-                confusion_matrix[classes.index(
-                    label)][classes.index(pred)] += 1
-
-                p = dict()
-                for el in preds:
-                    p[el[0]] = el[1]
-                e = {'abstract': abstract, 'preds': p, 'true_label': label}
-                examples[classes.index(label)][classes.index(pred)].append(e)
-
-            index_brevet = classes.index('brevet')
-            accuracy = confusion_matrix[index_brevet][index_brevet] / \
-                sum([confusion_matrix[i][index_brevet]
-                     for i in range(n_classes)])
-            recall = confusion_matrix[index_brevet][index_brevet] / \
-                sum([confusion_matrix[index_brevet][i]
-                     for i in range(n_classes)])
-
-            metrics = {'accuracy': accuracy,
-                       'recall': recall,
-                       'confusion_matrix': confusion_matrix,
-                       'classes': classes,
-                       'examples': examples
-                       }
-
-            return metrics
-
+        beg = time.time()
         total_recall = 0
         for i in range(n_tests):
-            classifier = fasttext.supervised(self.train_file,
-                                             self.model_name,
-                                             epoch=self.params['epoch'],
-                                             dim=10,
-                                             word_ngrams=self.params['word_ngrams'],
-                                             lr=self.params['lr'],
-                                             min_count=self.params['min_count'],
-                                             bucket=2000000,
-                                             loss='ns')
+            classifier = self.create_classifier()
             metrics = get_metrics(classifier, self.test_file)
             total_recall += metrics['recall']
+        end = time.time()
 
         self.score = total_recall/n_tests
+        self.training_time = (end-beg)/n_tests
 
         # Cleaning
         classifier = None
         metrics = None
 
+    def create_classifier(self):
+        return fasttext.supervised(self.train_file,
+                                   self.model_name,
+                                   epoch=self.params['epoch'],
+                                   dim=10,
+                                   word_ngrams=self.params['word_ngrams'],
+                                   lr=self.params['lr'],
+                                   min_count=self.params['min_count'],
+                                   bucket=2000000,
+                                   loss='ns')
+
     def copy(self):
         return Individual(self.params, self.score)
+
+    def save(self, name=None):
+        if name:
+            self.model_name = name
+        classifier = self.create_classifier()
+        metrics = get_metrics(classifier, self.test_file)
+        self.score = metrics['recall']
+
+        if self.verbose:
+            print(self)
+            print('Saved at {}'.format(self.model_name))
 
     def __repr__(self):
         return ', '.join(map(str, [self.params, self.score]))

@@ -5,7 +5,7 @@ How to find the best parameters to tune the model? Let's use genetic algorithms!
 ## TODO:
 
  - [ ] get_metrics is dependent on the labels names
- - [ ] no time output
+ - [X] no time output
  - [ ] better print output
  - [ ] save best model
  - [ ] gestion of train/test files to be enhanced

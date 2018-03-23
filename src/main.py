@@ -3,8 +3,10 @@ from genetics import *
 
 if __name__ == '__main__':
 
-    n_individuals = 20
-    n_rounds = 6
+    # n_individuals = 20
+    # n_rounds = 6
+    n_individuals = 3
+    n_rounds = 2
 
     params = dict()
     params['lr'] = [i/10 for i in range(1, 11)]
@@ -15,5 +17,4 @@ if __name__ == '__main__':
     experience = Experience(params, n_individuals, n_rounds=n_rounds)
 
     best = experience.launch()
-
-    print(best)
+    best.save('model_{}'.format(best.id))

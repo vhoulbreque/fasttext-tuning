@@ -54,5 +54,6 @@ class TestExperience():
         experience = Experience(params, n_individuals, n_rounds=n_rounds)
 
         best = experience.launch()
+        best.save('model_{}'.format(best.id))
 
         assert_equal(type(best), Individual)
