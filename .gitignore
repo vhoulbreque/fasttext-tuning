@@ -1,5 +1,9 @@
+# fasttext models
 *.bin
+*.vec
 test
 train
 
+# Python
 __pycache__
+*.pyc

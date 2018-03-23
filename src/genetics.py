@@ -5,11 +5,21 @@ import uuid
 
 class Experience():
 
-    def __init__(self, params, n_individuals, p_best=0.2, mutation=0.1, mix_rate=0.1, n_rounds=10, n_tests=1):
+    def __init__(self, params, n_individuals, p_best=0.2, mutation=0.1,
+                 mix_rate=0.1, n_rounds=10, n_tests=1):
+
+        if params is None:
+            raise Exception('Params is None and should be a non-empty dict')
+        if type(params) != dict:
+            raise Exception(
+                'Params is not a dict but a {}'.format(type(params)))
+        if len([f for f in params]) == 0:
+            raise Exception('Params is an empty dict')
+
         self.population = Population(
             params, n_individuals=n_individuals, n_rounds=n_rounds)
         self.verbose = True
-        self.n_epoch = 1
+        self.current_epoch = 1
         self.params = params
         self.n_individuals = n_individuals
         self.p_best = p_best
@@ -39,13 +49,14 @@ class Experience():
             self.population.next_generation()
             if self.verbose:
                 print(self)
-            self.n_epoch += 1
+            self.current_epoch += 1
 
         return self.population.individuals[0]
 
     def __repr__(self):
         r_string = '\n' + '#'*50 + '\n'
-        r_string += 'Epoch #{}/{}'.format(self.n_epoch, self.n_rounds) + '\n'
+        r_string += 'Epoch #{}/{}'.format(self.current_epoch,
+                                          self.n_rounds) + '\n'
         r_string += '#'*50 + '\n'
 
         template_s = ''.join(
@@ -72,7 +83,8 @@ class Population():
     there are not fit enough
     """
 
-    def __init__(self, params, n_individuals=10, p_best=0.2, mutation=0.1, mix_rate=0.1, n_rounds=10, n_tests=1):
+    def __init__(self, params, n_individuals=10, p_best=0.2, mutation=0.1,
+                 mix_rate=0.1, n_rounds=10, n_tests=1):
 
         if not params:
             raise Exception
@@ -86,7 +98,6 @@ class Population():
         self.mix_rate = mix_rate
         self.n_rounds = n_rounds
         self.n_tests = n_tests
-        self.n_epoch = 1
         self.verbose = True
         self.individuals = []
 
@@ -126,8 +137,8 @@ class Population():
 
     def next_generation(self):
         """
-        Computes the next generation of individuals by mixing 2 individuals from
-        the previous generation
+        Computes the next generation of individuals by mixing 2 individuals
+        from the previous generation
         """
 
         n_kept = self.p_best*len(self.individuals)
@@ -175,31 +186,12 @@ class Population():
         # Sort the individuals to have the fittest first
         self.sort_individuals()
 
-    def launch(self):
-        """
-        Does the necessary rounds and keeps the best individual at the end
-        of the process.
-        """
-
-        if self.verbose:
-            print('n_individuals : ', self.n_individuals)
-            print('p_best : ', self.p_best)
-            print('mutation : ', self.mutation)
-            print('n_rounds : ', self.n_rounds)
-            print('n_tests : ', self.n_tests)
-
-        for step in range(self.n_rounds):
-            self.next_generation()
-            self.n_epoch += 1
-
-        self.sort_individuals()
-        return self.individuals[0]
-
 
 class Individual():
 
     """
-    An individual is composed of attributes (genes) of certain values (alleles).
+    An individual is composed of attributes (genes) of certain values
+    (alleles).
     """
 
     def __init__(self, params, score=0):
