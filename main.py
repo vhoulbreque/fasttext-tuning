@@ -3,15 +3,14 @@ from genetics import *
 
 if __name__ == '__main__':
 
-    n_individuals = 15
-    n_rounds = 5
+    n_individuals = 20
+    n_rounds = 6
 
-    lr = Param('lr', [i/10 for i in range(1, 11)])
-    epoch = Param('epoch', [1, 5, 10, 15, 20, 25, 30, 35])
-    min_count = Param('min_count', [1, 10, 20])
-    word_ngrams = Param('word_ngrams', [1, 2, 3])
-
-    params = [lr, epoch, min_count, word_ngrams]
+    params = dict()
+    params['lr'] = [i/10 for i in range(1, 11)]
+    params['epoch'] = [1, 5, 10, 15, 20, 25, 30, 35]
+    params['min_count'] = [1, 10, 20]
+    params['word_ngrams'] = [1, 2, 3]
 
     experience = Experience(params, n_individuals, n_rounds=n_rounds)
 
