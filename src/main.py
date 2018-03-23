@@ -9,8 +9,8 @@ if __name__ == '__main__':
     n_rounds = 2
 
     params = dict()
-    params['lr'] = [i/10 for i in range(1, 11)]
     params['epoch'] = [1, 5, 10, 15, 20, 25, 30, 35]
+    params['lr'] = [i/10 for i in range(1, 11)]
     params['min_count'] = [1, 10, 20]
     params['word_ngrams'] = [1, 2, 3]
 
