@@ -1,4 +1,4 @@
-def get_metrics(model, test_file):
+def get_metrics(model, test_file, good_label):
     """
     Get the metrics, accuracy and recall of the model
     """
@@ -29,12 +29,12 @@ def get_metrics(model, test_file):
         e = {'abstract': abstract, 'preds': p, 'true_label': label}
         examples[classes.index(label)][classes.index(pred)].append(e)
 
-    index_brevet = classes.index('brevet')
-    accuracy = confusion_matrix[index_brevet][index_brevet] / \
-        sum([confusion_matrix[i][index_brevet]
+    index_good_label = classes.index(good_label)
+    accuracy = confusion_matrix[index_good_label][index_good_label] / \
+        sum([confusion_matrix[i][index_good_label]
              for i in range(n_classes)])
-    recall = confusion_matrix[index_brevet][index_brevet] / \
-        sum([confusion_matrix[index_brevet][i]
+    recall = confusion_matrix[index_good_label][index_good_label] / \
+        sum([confusion_matrix[index_good_label][i]
              for i in range(n_classes)])
 
     metrics = {'accuracy': accuracy,

@@ -51,7 +51,7 @@ class TestExperience():
         params['min_count'] = [1, 10, 20]
         params['word_ngrams'] = [1, 2, 3]
 
-        experience = Experience(params, n_individuals, n_rounds=n_rounds)
+        experience = Experience(params, n_individuals, n_rounds=n_rounds, good_label='clickbait')
 
         best = experience.launch()
         best.save('model_{}'.format(best.id))

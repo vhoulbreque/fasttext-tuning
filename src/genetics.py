@@ -9,7 +9,7 @@ from utils import get_metrics
 class Experience():
 
     def __init__(self, params, n_individuals, p_best=0.5, mutation=0.05,
-                 mix_rate=0.1, n_rounds=10, n_tests=1):
+                 mix_rate=0.1, n_rounds=10, n_tests=1, good_label='clickbait'):
 
         if params is None:
             raise Exception('Params is None and should be a non-empty dict')
@@ -20,7 +20,7 @@ class Experience():
             raise Exception('Params is an empty dict')
 
         self.population = Population(
-            params, n_individuals=n_individuals, n_rounds=n_rounds)
+            params, n_individuals=n_individuals, n_rounds=n_rounds, good_label=good_label)
         self.verbose = True
         self.current_epoch = 1
         self.params = params
@@ -95,7 +95,7 @@ class Population():
     """
 
     def __init__(self, params, n_individuals=10, p_best=0.5, mutation=0.05,
-                 mix_rate=0.1, n_rounds=10, n_tests=1):
+                 mix_rate=0.1, n_rounds=10, n_tests=1, good_label='clickbait'):
 
         if not params:
             raise Exception
@@ -110,6 +110,7 @@ class Population():
         self.n_rounds = n_rounds
         self.n_tests = n_tests
         self.verbose = True
+        self.good_label = good_label
         self.individuals = []
 
     def init_population(self):
@@ -133,6 +134,7 @@ class Population():
             params[f] = value
 
         ind.params = params
+        ind.good_label = self.good_label
 
         return ind
 
@@ -194,6 +196,7 @@ class Population():
                     child_params[f] = random.choice(self.params[f])
 
             child.params = child_params
+            child.good_label = self.good_label
             children.append(child)
 
         self.individuals = kept + children
@@ -209,7 +212,7 @@ class Individual():
     (alleles).
     """
 
-    def __init__(self, params, score=0, generation=0):
+    def __init__(self, params, score=0, generation=0, good_label='clickbait'):
         self.params = params
         self.score = score
         self.model_name = 'temp_model_genetics'
@@ -220,6 +223,7 @@ class Individual():
         self.verbose = True
         self.training_time = 0
         self.generation = generation
+        self.good_label = good_label
 
     def calculate_score(self, n_tests):
         """
@@ -230,7 +234,7 @@ class Individual():
         total_recall = 0
         for i in range(n_tests):
             classifier = self.create_classifier()
-            metrics = get_metrics(classifier, self.test_file)
+            metrics = get_metrics(classifier, self.test_file, self.good_label)
             total_recall += metrics['recall']
         end = time.time()
 
@@ -253,13 +257,13 @@ class Individual():
                                    loss='ns')
 
     def copy(self):
-        return Individual(self.params, self.score)
+        return Individual(self.params, self.score, self.good_label)
 
     def save(self, name=None):
         if name:
             self.model_name = name
         classifier = self.create_classifier()
-        metrics = get_metrics(classifier, self.test_file)
+        metrics = get_metrics(classifier, self.test_file, self.good_label)
         self.score = metrics['recall']
 
         if self.verbose:
