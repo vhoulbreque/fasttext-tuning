@@ -15,6 +15,12 @@ export PATH="project_path/src:$PATH"
 
 and execute `source ~/.bashrc`.
 
+Then, install the python libraries with:
+
+```
+$ pip install -r requirements.txt
+```
+
 ## TODO:
 
  - [X] get_metrics is dependent on the labels names
@@ -22,3 +28,4 @@ and execute `source ~/.bashrc`.
  - [ ] better print output
  - [X] save best model
  - [X] gestion of train/test files to be enhanced
+ - [ ] possibility to choose accuracy, recall, f1 score
