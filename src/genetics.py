@@ -9,7 +9,8 @@ from utils import get_metrics
 class Experience():
 
     def __init__(self, params, n_individuals, p_best=0.5, mutation=0.05,
-                 mix_rate=0.1, n_rounds=10, n_tests=1, good_label='clickbait'):
+                 mix_rate=0.1, n_rounds=10, n_tests=1, good_label='clickbait',
+                 train_file='train', test_file='test'):
 
         if params is None:
             raise Exception('Params is None and should be a non-empty dict')
@@ -19,8 +20,10 @@ class Experience():
         if len([f for f in params]) == 0:
             raise Exception('Params is an empty dict')
 
-        self.population = Population(
-            params, n_individuals=n_individuals, n_rounds=n_rounds, good_label=good_label)
+        self.population = Population(params,
+                                     n_individuals=n_individuals,
+                                     n_rounds=n_rounds,
+                                     good_label=good_label)
         self.verbose = True
         self.current_epoch = 1
         self.params = params
@@ -95,7 +98,8 @@ class Population():
     """
 
     def __init__(self, params, n_individuals=10, p_best=0.5, mutation=0.05,
-                 mix_rate=0.1, n_rounds=10, n_tests=1, good_label='clickbait'):
+                 mix_rate=0.1, n_rounds=10, n_tests=1, good_label='clickbait',
+                 train_file='train', test_file='test'):
 
         if not params:
             raise Exception
@@ -111,6 +115,8 @@ class Population():
         self.n_tests = n_tests
         self.verbose = True
         self.good_label = good_label
+        self.train_file = train_file
+        self.test_file = test_file
         self.individuals = []
 
     def init_population(self):
@@ -125,7 +131,8 @@ class Population():
         Generates an individual with random attributes
         """
 
-        ind = Individual(dict())
+        ind = Individual(dict(), good_label=self.good_label,
+                         train_file=self.train_file, test_file=self.test_file)
         params = dict()
 
         fields = [f for f in self.params]
@@ -134,7 +141,6 @@ class Population():
             params[f] = value
 
         ind.params = params
-        ind.good_label = self.good_label
 
         return ind
 
@@ -212,13 +218,14 @@ class Individual():
     (alleles).
     """
 
-    def __init__(self, params, score=0, generation=0, good_label='clickbait'):
+    def __init__(self, params, score=0, generation=0, good_label='clickbait',
+                 train_file='train', test_file='test'):
         self.params = params
         self.score = score
         self.model_name = 'temp_model_genetics'
         self.label = '__label__'
-        self.train_file = 'train'
-        self.test_file = 'test'
+        self.train_file = train_file
+        self.test_file = test_file
         self.id = uuid.uuid4()
         self.verbose = True
         self.training_time = 0
