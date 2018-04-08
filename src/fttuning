@@ -35,6 +35,9 @@ if __name__ == '__main__':
     params['min_count'] = [1, 10, 20]
     params['word_ngrams'] = [1, 2, 3]
 
+    print('Train file : ', args.train)
+    print('Test file : ', args.test)
+
     experience = Experience(params,
                             args.n_individuals,
                             n_rounds=args.n_rounds,

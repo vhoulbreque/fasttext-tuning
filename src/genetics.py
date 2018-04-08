@@ -23,7 +23,9 @@ class Experience():
         self.population = Population(params,
                                      n_individuals=n_individuals,
                                      n_rounds=n_rounds,
-                                     good_label=good_label)
+                                     good_label=good_label,
+                                     train_file=train_file,
+                                     test_file=test_file)
         self.verbose = True
         self.current_epoch = 1
         self.params = params
