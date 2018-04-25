@@ -3,7 +3,7 @@ import fasttext
 import uuid
 import time
 
-from utils import get_metrics
+from .utils import get_metrics
 
 
 class Experience():
@@ -205,6 +205,8 @@ class Population():
 
             child.params = child_params
             child.good_label = self.good_label
+            child.train_file = self.train_file
+            child.test_file = self.test_file
             children.append(child)
 
         self.individuals = kept + children
@@ -266,7 +268,8 @@ class Individual():
                                    loss='ns')
 
     def copy(self):
-        return Individual(self.params, self.score, self.good_label)
+        return Individual(self.params, self.score, self.good_label,
+                    self.good_label, self.train_file, self.test_file)
 
     def save(self, name=None):
         if name:

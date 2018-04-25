@@ -7,7 +7,7 @@ from nose.tools import raises
 
 sys.path.insert(0, '../src/')
 
-from genetics import *
+from fasttuning.genetics import *
 
 
 class TestExperience():
