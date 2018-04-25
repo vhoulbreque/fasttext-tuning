@@ -32,3 +32,7 @@ if __name__ == '__main__':
 
     best = experience.launch()
     best.save(model_name)
+
+    temp_file = 'temp_model_genetics.bin'
+    if os.path.isfile(temp_file):
+        os.remove(temp_file)
